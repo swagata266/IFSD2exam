@@ -1,0 +1,112 @@
+const { MongoClient } = require('mongodb');
+const prompt = require('prompt-sync')();
+
+// Connection URL and database name
+const url = 'mongodb+srv://Swagate:ankush123@cluster0.fjrkc4l.mongodb.net/?retryWrites=true&w=majority';
+const dbName = 'shop';
+
+// Create a new MongoClient
+const client = new MongoClient(url, { useUnifiedTopology: true });
+
+async function connectAndExecute(callback) {
+  try {
+    // Connect to the MongoDB server
+    await client.connect();
+
+    // Use the shop database
+    const db = client.db(dbName);
+
+    // Execute the provided callback function
+    await callback(db);
+  } finally {
+    // Close the connection
+    await client.close();
+  }
+}
+
+// Define the Shop and ShoppingComplex classes
+class Shop {
+  constructor(name, rent) {
+    this.name = name;
+    this.rent = rent;
+  }
+}
+
+class ShoppingComplex {
+  constructor() {
+    this.shops = [];
+  }
+
+  addShop(shop) {
+    this.shops.push(shop);
+  }
+
+  getTotalRent() {
+    let totalRent = 0;
+    for (const shop of this.shops) {
+      totalRent += shop.rent;
+    }
+    return totalRent;
+  }
+}
+
+// Create shopping complex instance
+const shoppingComplex = new ShoppingComplex();
+
+let continueAddingShops = true;
+
+while (continueAddingShops) {
+  // Ask for user input
+  const shopName = prompt("Enter the name of a shop: ");
+  const shopRent = parseInt(prompt("Enter the rent for the shop: "));
+
+  // Create a new shop instance with user-provided input
+  const userShop = new Shop(shopName, shopRent);
+
+  // Add the user's shop to the shopping complex
+  shoppingComplex.addShop(userShop);
+
+  const continueChoice = prompt("Do you want to add another shop? (yes/no): ");
+  if (continueChoice.toLowerCase() !== "yes") {
+    continueAddingShops = false;
+  }
+}
+
+// Perform CRUD operations on the MongoDB shop collection
+async function performCRUDOperations(db) {
+  // Get the shop collection
+  const shopCollection = db.collection('shop');
+
+  // Create operation
+  const insertResult = await shopCollection.insertMany(shoppingComplex.shops);
+  console.log('Inserted documents:', insertResult.insertedCount);
+
+  // Read operation
+  const findResult = await shopCollection.find({}).toArray();
+  console.log('All shops:', findResult);
+
+  // Update operation
+  const updateChoice = prompt("Do you want to update any shop? (yes/no): ");
+  if (updateChoice.toLowerCase() === "yes") {
+    const shopToUpdate = prompt("Enter the name of the shop to update: ");
+    const newRent = parseInt(prompt("Enter the new rent for the shop: "));
+
+    const updateResult = await shopCollection.updateOne(
+      { name: shopToUpdate },
+      { $set: { rent: newRent } }
+    );
+    console.log('Updated documents:', updateResult.modifiedCount);
+  }
+
+  // Delete operation
+  const deleteChoice = prompt("Do you want to delete any shop? (yes/no): ");
+  if (deleteChoice.toLowerCase() === "yes") {
+    const shopToDelete = prompt("Enter the name of the shop to delete: ");
+
+    const deleteResult = await shopCollection.deleteOne({ name: shopToDelete });
+    console.log('Deleted documents:', deleteResult.deletedCount);
+  }
+}
+
+// Call the connectAndExecute function with the performCRUDOperations callback
+connectAndExecute(performCRUDOperations);
