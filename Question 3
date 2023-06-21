@@ -1,0 +1,109 @@
+const mongoose = require('mongoose');
+const prompt = require('prompt-sync')();
+
+const url = 'mongodb+srv://Swagate:ankush123@cluster0.fjrkc4l.mongodb.net/';
+const dbName = 'shop';
+
+mongoose.connect(url + dbName , { useNewUrlParser: true, useUnifiedTopology: true })
+  .then(() => {
+    console.log('Connected to the database');
+    performCRUDOperations();
+  })
+  .catch((error) => {
+    console.error('Error connecting to the database:', error);
+  });
+
+const shopSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true,
+  },
+  rent: {
+    type: Number,
+    required: true,
+  },
+});
+
+// Define the Shop and ShoppingComplex classes
+const Shop = mongoose.model('Shop', shopSchema);
+
+class ShoppingComplex {
+  constructor() {
+    this.shops = [];
+  }
+
+  addShop(shop) {
+    this.shops.push(shop);
+  }
+
+  getTotalRent() {
+    let totalRent = 0;
+    for (const shop of this.shop) {
+      totalRent += shop.rent;
+    }
+    return totalRent;
+  }
+}
+
+// Create shopping complex instance
+const shoppingComplex = new ShoppingComplex();
+
+async function performCRUDOperations() {
+  let continueAddingShops = true;
+
+  while (continueAddingShops) {
+    // Ask for user input
+    const shopName = prompt('Enter the name of a shop: ');
+    const shopRent = parseInt(prompt('Enter the rent for the shop: '));
+
+    // Create a new shop instance with user-provided input
+    const userShop = new Shop({ name: shopName, rent: shopRent });
+
+    // Add the user's shop to the shopping complex
+    shoppingComplex.addShop(userShop);
+
+    const continueChoice = prompt('Do you want to add another shop? (yes/no): ');
+    if (continueChoice.toLowerCase() !== 'yes') {
+      continueAddingShops = false;
+      await performCRUDOperationsInDatabase();
+    }
+  }
+}
+
+async function performCRUDOperationsInDatabase() {
+  try {
+    // Insert operation
+    const insertResult = await Shop.insertMany(shoppingComplex.shops);
+    console.log('Inserted documents:', insertResult.length);
+
+    // Read operation
+    const findResult = await Shop.find({});
+    console.log('All shops:', findResult);
+
+    // Update operation
+    const updateChoice = prompt('Do you want to update any shop? (yes/no): ');
+    if (updateChoice.toLowerCase() === 'yes') {
+      const shopToUpdate = prompt('Enter the name of the shop to update: ');
+      const newRent = parseInt(prompt('Enter the new rent for the shop: '));
+
+      const updateResult = await Shop.updateOne(
+        { name: shopToUpdate },
+        { $set: { rent: newRent } }
+      );
+      console.log('Updated documents:', updateResult.nModified);
+    }
+
+    // Delete operation
+    const deleteChoice = prompt('Do you want to delete any shop? (yes/no): ');
+    if (deleteChoice.toLowerCase() === 'yes') {
+      const shopToDelete = prompt('Enter the name of the shop to delete: ');
+
+      const deleteResult = await Shop.deleteOne({ name: shopToDelete });
+      console.log('Deleted documents:', deleteResult.deletedCount);
+    }
+  } catch (error) {
+    console.error('Error performing CRUD operations:', error);
+  } finally {
+    mongoose.connection.close();
+  }
+}
