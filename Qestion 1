@@ -1,0 +1,52 @@
+const prompt = require("prompt-sync")();
+
+class Shop {
+  constructor(name, rent) {
+    this.name = name;
+    this.rent = rent;
+  }
+}
+
+class ShoppingComplex {
+  constructor() {
+    this.shops = [];
+  }
+
+  addShop(shop) {
+    this.shops.push(shop);
+  }
+
+  getTotalRent() {
+    let totalRent = 0;
+    for (const shop of this.shops) {
+      totalRent += shop.rent;
+    }
+    return totalRent;
+  }
+}
+
+// Create shopping complex instance
+const shoppingComplex = new ShoppingComplex();
+
+let continueAddingShops = true;
+
+while (continueAddingShops) {
+  // Ask for user input
+  const shopName = prompt("Enter the name of a shop: ");
+  const shopRent = parseInt(prompt("Enter the rent for the shop: "));
+
+  // Create a new shop instance with user-provided input
+  const userShop = new Shop(shopName, shopRent);
+
+  // Add the user's shop to the shopping complex
+  shoppingComplex.addShop(userShop);
+
+  const continueChoice = prompt("Do you want to add another shop? (yes/no): ");
+  if (continueChoice.toLowerCase() !== "yes") {
+    continueAddingShops = false;
+  }
+}
+
+// Calculate the total rent of all shops
+const totalRent = shoppingComplex.getTotalRent();
+console.log("Total rent of all shops:", totalRent);
